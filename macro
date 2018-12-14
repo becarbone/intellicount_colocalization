@@ -1,0 +1,98 @@
+var colorone, colortwo, thresholdone, thresholdtwo, maskschannelone, maskschanneltwo;
+var punctachannelone, punctachanneltwo, masksListone, masksListtwo, punctaListone, punctaListtwo;
+var onetwocount, twoonecount, title, shortTitle, end;
+
+Dialog.create("Channels");
+	colors = newArray("Green","Red","Blue","Cyan");
+	Dialog.addChoice("Channel 1 color", colors, "Green");
+	Dialog.addChoice("Channel 2 color", colors, "Red");
+	Dialog.addNumber("Channel 1 chosen threshold",45);
+	Dialog.addNumber("Channel 2 chosen threshold",45);
+Dialog.show;
+colorone = Dialog.getChoice();
+colortwo = Dialog.getChoice();
+thresholdone = Dialog.getNumber();
+thresholdtwo = Dialog.getNumber();
+maskschannelone = getDirectory(colorone + " masks");
+punctachannelone = getDirectory(colorone + " puncta");
+maskschanneltwo = getDirectory(colortwo + " masks");
+punctachanneltwo = getDirectory(colortwo + " puncta");
+resultsdir = getDirectory("Save files in...")
+
+masksListone = getFileList(maskschannelone);
+masksListtwo = getFileList(maskschanneltwo);
+punctaListone = getFileList(punctachannelone);
+punctaListtwo = getFileList(punctachanneltwo);
+
+onetwocount = 0;
+twoonecount = 0;
+onetwoArray = newArray("at threshold " + thresholdone + " avg % overlap counted and total");
+twooneArray = newArray("at threshold " + thresholdtwo + " avg % overlap counted and total");
+
+for(i=0;i<masksListone.length;i++) {
+	open(maskschannelone+masksListone[i]);
+	title = getTitle();
+	end = "_"+colorone +".tif";
+	shortTitle = substring(title,0,lengthOf(title)-lengthOf(end));
+	twoonecount = shortTitle;
+	areacount = 0;
+	count = 0;
+	p = 0;
+	if(File.exists(punctachanneltwo+"ROI_"+shortTitle+"_"+colortwo+"_"+thresholdtwo+".zip") == 1 ) {
+		setSlice(thresholdone/3);
+		roiManager("reset");
+		roiManager("open",punctachanneltwo+"ROI_"+shortTitle+"_"+colortwo+"_"+thresholdtwo+".zip");
+		run("Clear Results");
+		roiManager("Measure");
+		tocount = 0;
+		for(n=0;n<nResults;n++){
+			areacount = areacount + getResult("%Area",n);
+			if(getResult("%Area",n)>25) {
+				tocount++;
+				areacount = areacount + getResult("Area",n);
+				count = count + getResult("%Area",n);
+				p++;
+			}
+		}
+		twoonecount = twoonecount + "	" + tocount + "	" + (count/p) + "	" + (areacount/n);
+		selectImage(title);
+		close();
+		twooneArray = Array.concat(twooneArray,twoonecount);
+	}
+}
+for(i=0;i<masksListtwo.length;i++) {
+	open(maskschanneltwo+masksListtwo[i]);
+	title = getTitle();
+	end = "_"+colortwo +".tif";
+	shortTitle = substring(title,0,lengthOf(title)-lengthOf(end));
+	onetwocount = shortTitle;
+	areacount = 0;
+	count = 0;
+	p = 0;
+	if(File.exists(punctachannelone+"ROI_"+shortTitle+"_"+colorone+"_"+thresholdone+".zip") == 1 ){
+		setSlice(thresholdtwo/3);
+		roiManager("reset");
+		roiManager("open",punctachannelone+"ROI_"+shortTitle+"_"+colorone+"_"+thresholdone+".zip");
+		run("Clear Results");
+		roiManager("Measure");
+		otcount = 0;
+		for(n=0;n<nResults;n++){
+		areacount = areacount + getResult("%Area",n);
+			if(getResult("%Area",n)>25) {
+				tocount++;
+				count = count + getResult("%Area",n);
+				p++;
+			}
+		}
+		onetwocount = onetwocount + "	" + otcount + "	" + (count/p) + "	" + (areacount/n);
+		selectImage(title);
+		close();
+		onetwoArray = Array.concat(onetwoArray,onetwocount);
+	}
+}
+Array.show("Colocalization",twooneArray,onetwoArray);
+selectWindow("Colocalization");
+saveAs("Results",resultsdir+"Colocalization.xls");
+run("Close All");
+
+//NEXT STEP: make it so that it ignores it if the files don't exist
